@@ -2207,6 +2207,8 @@ more_nonces:
 	if (ret == ICA_NONCE_ERROR)
 		goto out;
 
+	work->blk.nonce = 0xffffffff;
+
 	// aborted before becoming idle, get new work
 	if (ret == ICA_NONCE_TIMEOUT || ret == ICA_NONCE_RESTART) {
 		if (info->ant)

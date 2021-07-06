@@ -16,11 +16,11 @@ LIBCURL_CPPFLAGS =
 endif
 
 EXTRA_DIST	= example.conf linux-usb-cgminer \
-		  api-example.php miner.php	\
+		  ADL_SDK/readme.txt api-example.php miner.php	\
 		  API.class API.java api-example.c windows-build.txt \
-		  bitstreams/README API-README FPGA-README \
+		  bitstreams/README API-README FPGA-README SCRYPT-README \
 		  bitforce-firmware-flash.c hexdump.c ASIC-README \
-		  01-cgminer.rules
+		  01-cgminer.rules GPU-README
 
 SUBDIRS		= lib compat ccan
 
@@ -30,15 +30,17 @@ bin_PROGRAMS	= cgminer
 
 cgminer_LDFLAGS	= $(PTHREAD_FLAGS)
 cgminer_LDADD	= $(DLOPEN_FLAGS) @LIBCURL_LIBS@ @JANSSON_LIBS@ @LIBZ_LIBS@ @PTHREAD_LIBS@ \
-		  @NCURSES_LIBS@ @PDCURSES_LIBS@ @WS2_LIBS@ \
+		  @OPENCL_LIBS@ @NCURSES_LIBS@ @PDCURSES_LIBS@ @WS2_LIBS@ \
 		  @LIBUSB_LIBS@ @MM_LIBS@ @RT_LIBS@ @LIBSYSTEMD_LIBS@ \
 		  @MATH_LIBS@ lib/libgnu.a ccan/libccan.a
 
-cgminer_CPPFLAGS += -I$(top_builddir)/lib -I$(top_srcdir)/lib
+cgminer_CPPFLAGS += -I$(top_builddir)/lib -I$(top_srcdir)/lib @OPENCL_FLAGS@
 
 if !HAVE_WINDOWS
 cgminer_CPPFLAGS += @LIBCURL_CFLAGS@
 endif
+
+cgminer_CPPFLAGS += $(ADL_CPPFLAGS)
 
 # common sources
 cgminer_SOURCES := cgminer.c
@@ -52,6 +54,20 @@ cgminer_SOURCES	+= logging.c
 cgminer_SOURCES	+= klist.h klist.c
 
 cgminer_SOURCES	+= noncedup.c
+
+if HAS_OPENCL
+bin_SCRIPTS	= $(top_srcdir)/*.cl
+
+cgminer_SOURCES += driver-opencl.h driver-opencl.c
+cgminer_SOURCES += ocl.c ocl.h findnonce.c findnonce.h
+cgminer_SOURCES += adl.c adl.h adl_functions.h
+cgminer_SOURCES += *.cl
+
+if HAS_SCRYPT
+cgminer_SOURCES += scrypt.c scrypt.h
+endif
+
+endif
 
 if NEED_FPGAUTILS
 cgminer_SOURCES += fpgautils.c fpgautils.h
