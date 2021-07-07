@@ -1198,7 +1198,7 @@ bool tq_push(struct thread_q *tq, void *data)
 	return rc;
 }
 
-void *tq_pop(struct thread_q *tq)
+void *tq_pop(struct thread_q *tq, const struct timespec *abstime)
 {
 	struct tq_ent *ent;
 	void *rval = NULL;
@@ -1208,6 +1208,9 @@ void *tq_pop(struct thread_q *tq)
 	if (!list_empty(&tq->q))
 		goto pop;
 
+	if (abstime)
+		rc = pthread_cond_timedwait(&tq->cond, &tq->mutex, abstime);
+	else
 	rc = pthread_cond_wait(&tq->cond, &tq->mutex);
 	if (rc)
 		goto out;

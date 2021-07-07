@@ -4938,7 +4938,7 @@ void roll_work_ntime(struct work *work, int noffset)
 	*work_ntime = htobe32(ntime);
 	local_work++;
 	work->rolls += noffset;
-	work->nonce = 0;
+	work->blk.nonce = 0;
 	applog(LOG_DEBUG, "Successfully rolled work");
 
 	/* Change the ntime field if this is stratum work */
@@ -7366,7 +7366,7 @@ static void *stratum_sthread(void *userdata)
 		if (unlikely(pool->removed))
 			break;
 
-		work = tq_pop(pool->stratum_q);
+		work = tq_pop(pool->stratum_q, NULL);
 		if (unlikely(!work))
 			quit(1, "Stratum q returned empty work");
 
@@ -8216,7 +8216,7 @@ static void gen_solo_work(struct pool *pool, struct work *work)
 	local_work++;
 	work->gbt = true;
 	work->pool = pool;
-	work->nonce = 0;
+	work->blk.nonce = 0;
 	work->longpoll = false;
 	work->getwork_mode = GETWORK_MODE_SOLO;
 	work->work_block = work_block;
@@ -8559,7 +8559,8 @@ static void hash_sole_work(struct thr_info *mythr)
 				"mining thread %d", thr_id);
 			break;
 		}
-		work->device_diff = MIN(drv->max_diff, work->work_difficulty);
+		work->device_diff = MIN(drv->working_diff, drv->max_diff);
+		work->device_diff = MIN(work->device_diff, work->work_difficulty);
 		work->device_diff = MAX(drv->min_diff, work->device_diff);
 
 #ifdef USE_SCRYPT
@@ -8576,6 +8577,7 @@ static void hash_sole_work(struct thr_info *mythr)
 				applog(LOG_DEBUG, "Driver %s working diff changed to %.0f",
 					drv->dname, drv->working_diff);
 				work->device_diff = MIN(drv->working_diff, work->work_difficulty);
+				work->device_diff = MIN(drv->max_diff, work->device_diff);
 			} else if (drv->working_diff > work->work_difficulty)
 				drv->working_diff = work->work_difficulty;
 			set_target(work->device_target, work->device_diff);
@@ -10217,6 +10219,8 @@ void fill_device_drv(struct device_drv *drv)
 	 * we will assume they don't and set max to 1. */
 	if (!drv->max_diff)
 		drv->max_diff = 1;
+	if (!drv->working_diff)
+		drv->working_diff = 1;
 	if (!drv->genwork)
 		opt_gen_stratum_work = true;
 }
